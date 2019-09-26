@@ -200,6 +200,11 @@ interface YearlySummary {
   year: number;
   assetsAndLiabilities: Readonly<Array<Asset | Liability>>;
   transactions: Readonly<Transaction[]>;
+  totals: {
+    totalAssets: number;
+    totalLiabilities: number;
+    netWorth: number;
+  };
 }
 
 function runSimulation(
@@ -210,7 +215,16 @@ function runSimulation(
   const result: SimulationResult = {
     years: []
   };
-  let assetsAndLiabilities: Readonly<Array<Asset | Liability>> = [];
+  const cashAsset: Asset = {
+    id: getID(),
+    type: "Asset",
+    name: "Cash",
+    yearCreated: startingYear,
+    value: 0,
+    annualTransactions: () => []
+  };
+
+  let assetsAndLiabilities: Array<Asset | Liability> = [cashAsset];
   for (let y = startingYear; y <= endingYear; y++) {
     const newDecisions = decisions.filter(d => d.yearDecided === y);
     newDecisions.forEach(d => {
@@ -245,6 +259,21 @@ function runSimulation(
       });
     });
 
+    // Move money in and out of the cash asset account
+    const thisYearsCash = assetsAndLiabilities.find(
+      item => item.type === "Asset" && item.name === "Cash"
+    ) as Asset;
+    thisYearsTransactions.forEach(transaction => {
+      if (typeof thisYearsCash.value === "number") {
+        thisYearsCash.value +=
+          (transaction.type === "earn" ? 1 : -1) * transaction.amount;
+      } else {
+        throw Error(
+          `Cash value should be a number, found: ${typeof thisYearsCash.value}`
+        );
+      }
+    });
+
     // Calculate asset and liability values
     let valuedItems = clone(assetsAndLiabilities).map(item => ({
       ...clone(item),
@@ -260,11 +289,16 @@ function runSimulation(
       {
         year: y,
         assetsAndLiabilities: [...valuedItems],
-        transactions: thisYearsTransactions
+        transactions: thisYearsTransactions,
+        totals: {
+          netWorth: 0,
+          totalAssets: 0,
+          totalLiabilities: 0
+        }
       }
     ];
 
-    //Decisions can also directly result in lost assets
+    // Decisions can also directly result in lost assets. Figure those out now.
     newDecisions
       .filter(d => d.loseAssets)
       .forEach(d => {
@@ -297,7 +331,13 @@ function formatSimulationResult(result: SimulationResult): string {
       .filter(item => item.type === "Asset")
       .forEach(asset => {
         out += `\t\t[${asset.id}] ${asset.name} ${
-          asset.value !== undefined ? `\$${asset.value}` : ""
+          asset.value !== undefined
+            ? `\$${
+                typeof asset.value === "number"
+                  ? asset.value.toFixed(0)
+                  : asset.value
+              }`
+            : ""
         }\n`;
       });
 
@@ -352,9 +392,11 @@ Assets and liabilities result in new transactions each year
 
 
 TODO:
-[ ] Income
+[x] Income
 [ ] Stocks/shares (assets that accumulate?)
 [ ] Cost-of-living lookups for transactions/values (???)
 [ ] Value lookup for stocks
 [ ] Conditional decisions? (buy if...)
+[ ] Debt!
+[ ] Taxes
 */

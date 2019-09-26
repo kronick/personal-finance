@@ -40,6 +40,35 @@ describe("Simulator", () => {
     });
   });
 
+  describe("Cash assets", () => {
+    const decision = constantCostDecision({
+      name: "Constant Cost",
+      annualCost: 2,
+      yearCreated: 2001,
+      yearsActive: 4
+    });
+    const result = runSimulation([decision], 2000, 2099);
+
+    it("spends from cash account", () => {
+      const cash0 = result.years[0].assetsAndLiabilities.find(
+        item => item.name === "Cash"
+      );
+      const cash1 = result.years[1].assetsAndLiabilities.find(
+        item => item.name === "Cash"
+      );
+      const cash2 = result.years[2].assetsAndLiabilities.find(
+        item => item.name === "Cash"
+      );
+      expect(cash0).toBeTruthy();
+      expect(cash1).toBeTruthy();
+      expect(cash2).toBeTruthy();
+
+      expect(cash0!.value).toBe(0);
+      expect(cash1!.value).toBe(-2);
+      expect(cash2!.value).toBe(-4);
+    });
+  });
+
   describe("Buy car decision", () => {
     const decision = buyCarDecision({
       initialCost: 1000,
@@ -49,20 +78,20 @@ describe("Simulator", () => {
     const result = runSimulation([decision], 2000, 2099);
 
     describe("Assets and Liabilities", () => {
-      it("should have no assets or liabilities at the start", () => {
-        expect(result.years[0].assetsAndLiabilities.length).toBe(0);
+      it("should have only cash asset at the start", () => {
+        expect(result.years[0].assetsAndLiabilities.length).toBe(1);
       });
       it("should still have a car in year 10", () => {
-        expect(result.years[10].assetsAndLiabilities.length).toBe(2);
+        expect(result.years[10].assetsAndLiabilities.length).toBe(3);
       });
       it("should have no assets or liabilities after the expected life", () => {
-        expect(result.years[11].assetsAndLiabilities.length).toBe(0);
+        expect(result.years[11].assetsAndLiabilities.length).toBe(1);
       });
 
       it("should gain a Car asset and Car Maintenance liability in purchase year", () => {
         const assetsAndLiabilities = result.years[1].assetsAndLiabilities;
         const carAsset = assetsAndLiabilities.find(
-          item => item.type === "Asset"
+          item => item.type === "Asset" && item.name === "Car"
         );
         const maintenanceLiability = assetsAndLiabilities.find(
           item => item.type === "Liability"
@@ -77,18 +106,18 @@ describe("Simulator", () => {
       it("Car asset should depreciate in value over time", () => {
         const assetsAndLiabilitiesYear1 = result.years[1].assetsAndLiabilities;
         const carAssetYear1 = assetsAndLiabilitiesYear1.find(
-          item => item.type === "Asset"
+          item => item.type === "Asset" && item.name === "Car"
         );
 
         const assetsAndLiabilitiesYear2 = result.years[2].assetsAndLiabilities;
         const carAssetYear2 = assetsAndLiabilitiesYear2.find(
-          item => item.type === "Asset"
+          item => item.type === "Asset" && item.name === "Car"
         );
 
         const assetsAndLiabilitiesYear10 =
           result.years[10].assetsAndLiabilities;
         const carAssetYear10 = assetsAndLiabilitiesYear10.find(
-          item => item.type === "Asset"
+          item => item.type === "Asset" && item.name === "Car"
         );
 
         expect(carAssetYear1!.value).toBe(1000);
@@ -138,20 +167,20 @@ describe("Simulator", () => {
         result.years[1].assetsAndLiabilities.filter(
           item => item.type === "Asset"
         ).length
-      ).toBe(1);
+      ).toBe(2);
     });
     it("Job should persist until stopped", () => {
       expect(
         result.years[10].assetsAndLiabilities.filter(
           item => item.type === "Asset"
         ).length
-      ).toBe(1);
+      ).toBe(2);
 
       expect(
         result.years[11].assetsAndLiabilities.filter(
           item => item.type === "Asset"
         ).length
-      ).toBe(0);
+      ).toBe(1);
     });
     it("should earn a salary", () => {
       expect(
