@@ -1,11 +1,11 @@
 import {
   buyCarDecision,
   constantCostDecision,
-  runSimulation,
-  formatSimulationResult,
   startJobDecision,
   stopJobDecision
 } from "./";
+
+import { runSimulation, formatSimulationResult } from "../Simulator";
 
 describe("Simulator", () => {
   describe("Constant cost decision", () => {
